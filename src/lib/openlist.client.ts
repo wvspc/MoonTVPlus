@@ -134,11 +134,29 @@ export class OpenListClient {
 
     const response = await fetch(url, requestOptions);
 
-    // 如果是401且未重试过，清除缓存并重新登录后重试
+    // 检查 HTTP status 401
     if (response.status === 401 && !retried) {
-      console.log('[OpenListClient] 收到 401，清除 Token 缓存并重试');
+      console.log('[OpenListClient] 收到 HTTP 401，清除 Token 缓存并重试');
       this.clearTokenCache();
       return this.fetchWithRetry(url, options, true);
+    }
+
+    // 检查响应体中的 code 字段（OpenList 的 Token 过期时 HTTP status 是 200，但 code 是 401）
+    if (response.ok && !retried) {
+      try {
+        // 克隆响应以便读取 JSON
+        const clonedResponse = response.clone();
+        const data = await clonedResponse.json();
+
+        if (data.code === 401) {
+          console.log('[OpenListClient] 响应体 code 为 401，Token 已过期，清除缓存并重试');
+          this.clearTokenCache();
+          return this.fetchWithRetry(url, options, true);
+        }
+      } catch (error) {
+        // 如果解析 JSON 失败，忽略错误，返回原始响应
+        console.warn('[OpenListClient] 解析响应 JSON 失败:', error);
+      }
     }
 
     return response;
