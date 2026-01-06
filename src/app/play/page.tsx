@@ -677,8 +677,10 @@ function PlayPageClient() {
       const manualEpisodeId = getManualDanmakuSelection(title, episodeIndex);
       if (manualEpisodeId) {
         console.log(`[弹幕记忆] 使用手动选择的剧集 ID: ${manualEpisodeId}`);
-        setDanmakuLoading(true);
         try {
+          // 需要获取完整的 selection 信息来调用 handleDanmakuSelect
+          // 但这里只有 episodeId，所以保持直接调用 loadDanmaku
+          setDanmakuLoading(true);
           await loadDanmaku(manualEpisodeId);
           console.log('[弹幕记忆] 使用手动选择的弹幕成功');
           return; // 使用手动选择成功，直接返回
@@ -703,8 +705,18 @@ function PlayPageClient() {
 
             if (episode) {
               console.log(`[弹幕记忆] 使用保存的动漫ID匹配成功: ${episode.episodeTitle}`);
-              await loadDanmaku(episode.episodeId);
+
+              const selection: DanmakuSelection = {
+                animeId: savedAnimeId,
+                episodeId: episode.episodeId,
+                animeTitle: episodesResult.bangumi.animeTitle,
+                episodeTitle: episode.episodeTitle,
+              };
+
               setDanmakuEpisodesList(episodesResult.bangumi.episodes);
+
+              // 通过统一的 handleDanmakuSelect 处理弹幕加载
+              await handleDanmakuSelect(selection);
               return; // 匹配成功，直接返回
             } else {
               console.log('[弹幕记忆] 使用保存的动漫ID匹配失败，降级到关键词搜索');
@@ -766,16 +778,13 @@ function PlayPageClient() {
                     episodeTitle: episode.episodeTitle,
                   };
 
-                  // 设置选择记录
-                  setCurrentDanmakuSelection(selection);
-
-                  // 加载弹幕
-                  await loadDanmaku(episode.episodeId);
-
                   // 设置剧集列表
                   setDanmakuEpisodesList(episodesResult.bangumi.episodes);
 
                   console.log('使用记忆的弹幕源成功:', selection);
+
+                  // 通过统一的 handleDanmakuSelect 处理弹幕加载
+                  await handleDanmakuSelect(selection);
                   setDanmakuLoading(false);
                   return;
                 }
@@ -817,16 +826,13 @@ function PlayPageClient() {
                 episodeTitle: episode.episodeTitle,
               };
 
-              // 设置选择记录
-              setCurrentDanmakuSelection(selection);
-
-              // 加载弹幕
-              await loadDanmaku(episode.episodeId);
-
               // 设置剧集列表
               setDanmakuEpisodesList(episodesResult.bangumi.episodes);
 
               console.log('自动搜索弹幕成功:', selection);
+
+              // 通过统一的 handleDanmakuSelect 处理弹幕加载
+              await handleDanmakuSelect(selection);
             }
           } else {
             console.warn('未找到剧集信息');
@@ -3184,7 +3190,6 @@ function PlayPageClient() {
   // 处理用户选择弹幕源
   const handleDanmakuSourceSelect = async (selectedAnime: DanmakuAnime, selectedIndex?: number) => {
     setShowDanmakuSourceSelector(false);
-    setDanmakuLoading(true);
 
     try {
       const title = videoTitleRef.current;
@@ -3215,24 +3220,19 @@ function PlayPageClient() {
             episodeTitle: episode.episodeTitle,
           };
 
-          // 先设置选择记录
-          setCurrentDanmakuSelection(selection);
-
-          // 加载弹幕
-          await loadDanmaku(episode.episodeId);
-
           // 设置剧集列表
           setDanmakuEpisodesList(episodesResult.bangumi.episodes);
 
           console.log('用户选择弹幕源:', selection);
+
+          // 通过统一的 handleDanmakuSelect 处理弹幕加载
+          await handleDanmakuSelect(selection);
         }
       } else {
         console.warn('未找到剧集信息');
       }
     } catch (error) {
       console.error('加载弹幕失败:', error);
-    } finally {
-      setDanmakuLoading(false);
     }
   };
 
@@ -3432,16 +3432,13 @@ function PlayPageClient() {
               episodeTitle: episode.episodeTitle,
             };
 
-            // 先设置选择记录
-            setCurrentDanmakuSelection(selection);
-
-            // 加载弹幕
-            await loadDanmaku(episode.episodeId);
-
             // 设置剧集列表
             setDanmakuEpisodesList(episodesResult.bangumi.episodes);
 
             console.log('自动搜索弹幕成功:', selection);
+
+            // 通过统一的 handleDanmakuSelect 处理弹幕加载
+            await handleDanmakuSelect(selection);
           }
         } else {
           console.warn('未找到剧集信息');
